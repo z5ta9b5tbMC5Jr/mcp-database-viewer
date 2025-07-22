@@ -13,7 +13,7 @@ Uma ferramenta para visualização e manipulação de bancos de dados através d
 
 ```bash
 # Clone o repositório
-git clone https://github.com/seu-usuario/mcp-database-viewer.git
+git clone https://github.com/z5ta9b5tbMC5Jr/mcp-database-viewer.git
 
 # Entre no diretório
 cd mcp-database-viewer
