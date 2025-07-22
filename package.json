@@ -1,0 +1,50 @@
+{
+  "name": "mcp-database-viewer",
+  "version": "1.0.0",
+  "description": "MCP para visualização e manipulação de bancos de dados",
+  "main": "index.js",
+  "scripts": {
+    "start": "node start.js",
+    "test": "node test-mcp.js"
+  },
+  "keywords": [
+    "mcp",
+    "database",
+    "sql",
+    "nosql",
+    "mysql",
+    "postgres",
+    "sqlite",
+    "mssql",
+    "mongodb"
+  ],
+  "author": "Bypass-dev",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "mongodb": "^5.7.0",
+    "mssql": "^9.1.1",
+    "mysql2": "^3.5.2",
+    "pg": "^8.11.1",
+    "sqlite3": "^5.1.6",
+    "uuid": "^9.0.0",
+    "winston": "^3.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/z5ta9b5tbMC5Jr/mcp-database-viewer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/z5ta9b5tbMC5Jr/mcp-database-viewer/issues"
+  },
+  "homepage": "https://github.com/z5ta9b5tbMC5Jr/mcp-database-viewer#readme"
+}
