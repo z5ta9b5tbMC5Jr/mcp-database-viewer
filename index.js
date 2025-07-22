@@ -1,115 +1,83 @@
-/**
- * Arquivo principal do MCP Database Viewer
- */
-
-require('dotenv').config();
-
 const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
-const winston = require('winston');
-
-// Importar processador de chamadas MCP
+const { createDatabaseConnector } = require('./connectors');
+const { registerMCPTools } = require('./mcp-tools');
 const { processMCPToolCall } = require('./mcp-implementation');
+const routes = require('./routes');
+const path = require('path');
+const fs = require('fs');
 
-// Configuração do logger
-const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
-  transports: [
-    new winston.transports.Console(),
-    new winston.transports.File({ filename: 'mcp-database-viewer.log' })
-  ]
-});
-
-// Carregar configuração MCP
-let mcpConfig;
-try {
-  mcpConfig = JSON.parse(fs.readFileSync(path.join(__dirname, 'mcp-config.json'), 'utf8'));
-  logger.info('Configuração MCP carregada com sucesso');
-} catch (error) {
-  logger.error(`Erro ao carregar configuração MCP: ${error.message}`);
-  process.exit(1);
-}
-
-// Inicializar aplicação Express
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors());
-app.use(bodyParser.json({ limit: process.env.REQUEST_LIMIT || '100mb' }));
+app.use(express.json());
 
-// Rota principal
+// Rota para verificar se o servidor está funcionando
 app.get('/', (req, res) => {
-  res.json({
-    name: mcpConfig.name,
-    description: mcpConfig.description,
-    version: mcpConfig.version,
-    status: 'running'
-  });
+  res.json({ status: 'MCP Database Viewer está funcionando!' });
 });
 
-// Rota para listar ferramentas disponíveis
-app.get('/mcp/tools', (req, res) => {
-  res.json({
-    tools: mcpConfig.tools.map(tool => ({
-      name: tool.name,
-      description: tool.description
-    }))
-  });
-});
+// Usar as rotas da API
+app.use('/api', routes);
 
 // Rota para processar chamadas de ferramentas MCP
 app.post('/mcp/tool', async (req, res) => {
   try {
-    const { server_name, tool_name, args } = req.body;
+    const { tool, args } = req.body;
     
-    // Verificar se o servidor solicitado corresponde ao nosso MCP
-    if (server_name !== mcpConfig.name) {
-      return res.status(400).json({
-        success: false,
-        error: `Servidor MCP '${server_name}' não encontrado`
-      });
-    }
-    
-    // Verificar se a ferramenta existe
-    const tool = mcpConfig.tools.find(t => t.name === tool_name);
     if (!tool) {
       return res.status(400).json({
         success: false,
-        error: `Ferramenta '${tool_name}' não encontrada`
+        error: 'Nome da ferramenta MCP não fornecido'
       });
     }
     
-    logger.info(`Processando chamada de ferramenta: ${tool_name}`, { args });
-    
-    // Processar a chamada da ferramenta
-    const result = await processMCPToolCall(tool_name, args);
-    
-    logger.info(`Chamada de ferramenta ${tool_name} processada com sucesso`);
+    const result = await processMCPToolCall(tool, args || {});
     res.json(result);
   } catch (error) {
-    logger.error(`Erro ao processar chamada de ferramenta: ${error.message}`);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: `Erro ao processar chamada MCP: ${error.message}`
     });
   }
 });
 
-// Iniciar servidor
-app.listen(port, () => {
-  logger.info(`MCP Database Viewer iniciado na porta ${port}`);
-  logger.info(`Nome: ${mcpConfig.name}`);
-  logger.info(`Versão: ${mcpConfig.version}`);
-  logger.info(`Ferramentas disponíveis: ${mcpConfig.tools.length}`);
-  logger.info(`URL de acesso: http://localhost:${port}`);
+// Verificar se o arquivo de configuração MCP existe
+const mcpConfigPath = path.join(__dirname, 'mcp-config.json');
+if (!fs.existsSync(mcpConfigPath)) {
+  console.error('Arquivo de configuração MCP não encontrado:', mcpConfigPath);
+  process.exit(1);
+}
+
+// Carregar a configuração MCP
+const mcpConfig = require('./mcp-config.json');
+console.log(`MCP carregado: ${mcpConfig.server_name}`);
+console.log(`Ferramentas disponíveis: ${mcpConfig.tools.map(tool => tool.name).join(', ')}`);
+
+// Iniciar o servidor com tratamento de erro
+const server = app.listen(PORT, () => {
+  console.log(`MCP Database Viewer rodando na porta ${PORT}`);
+  console.log('Ferramentas MCP registradas e prontas para uso');
+  console.log(`Arquivo de configuração MCP: ${mcpConfigPath}`);
+  console.log(`Acesse o servidor em: http://localhost:${PORT}`);
+  
+  // Registrar as ferramentas MCP
+  registerMCPTools();
+});
+
+// Tratamento de erro para porta ocupada
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n❌ Erro: A porta ${PORT} já está sendo usada por outro processo.`);
+    console.error('\n💡 Soluções:');
+    console.error('   1. Pare o processo que está usando a porta 3000');
+    console.error('   2. Use uma porta diferente: PORT=3001 node start.js');
+    console.error('   3. Ou defina PORT no arquivo .env');
+    console.error('\n🔍 Para encontrar o processo: netstat -ano | findstr :3000');
+    process.exit(1);
+  } else {
+    console.error('Erro ao iniciar o servidor:', err.message);
+    process.exit(1);
+  }
 });
 
 module.exports = app;
